@@ -1,36 +1,42 @@
 import os
 from flask import Flask, jsonify, request
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
+from google import genai
+from google.genai import types
 
-# Load environment variables (API Keys)
 load_dotenv()
-
 app = Flask(__name__)
 
-# Initialize our LLM (The Brain)
-# We'll use GPT-4o-mini because it's fast and cheap for development
-llm = ChatOpenAI(model="gpt-4o-mini")
+# This client setup is the most stable for 2026
+client = genai.Client(
+    api_key=os.getenv("GOOGLE_API_KEY"),
+    http_options=types.HttpOptions(api_version='v1') # Force stable v1
+)
 
+# Use the 2026 stable model name
+MODEL_ID = "gemini-2.5-flash" 
 
 @app.route('/')
 def home():
-    return "HR AI Agent API is running!"
-
+    return "HR AI Agent: Version 2.5 Stable Active"
 
 @app.route('/api/test-ai', methods=['POST'])
 def test_ai():
-    # A simple agentic thought process test
-    data = request.json
-    user_input = data.get("message", "Say hello!")
-
-    prompt = ChatPromptTemplate.from_template("You are an HR expert. Answer this: {input}")
-    chain = prompt | llm
-
-    response = chain.invoke({"input": user_input})
-    return jsonify({"response": response.content})
-
+    try:
+        data = request.json
+        user_input = data.get("message", "Say hello!")
+        
+        # New SDK syntax for 2026
+        response = client.models.generate_content(
+            model=MODEL_ID,
+            contents=user_input
+        )
+        
+        return jsonify({"response": response.text})
+    except Exception as e:
+        # Senior Dev Tip: Detailed logging helps us stop guessing
+        print(f"DEBUG ERROR: {e}")
+        return jsonify({"error": str(e)})
 
 if __name__ == "__main__":
     app.run(debug=True)

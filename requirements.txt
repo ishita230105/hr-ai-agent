@@ -1,5 +1,4 @@
 flask
-langchain
-langchain-openai
+google-genai
 python-dotenv
 pypdf
