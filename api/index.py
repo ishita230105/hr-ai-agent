@@ -3,24 +3,15 @@ from flask import Flask, render_template, jsonify, request
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-import pypdf
-import io
-
-def extract_text_from_pdf(pdf_bytes):
-    # This reads the PDF from memory (fast and serverless-friendly)
-    reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
-    text = ""
-    for page in reader.pages:
-        text += page.extract_text() + "\n"
-    return text
 
 load_dotenv()
 
-# 1. Setup absolute paths for templates
+# VERCEL-SAFE PATH LOGIC
+# This checks if we are on Vercel or Local and finds the templates accordingly
 api_dir = os.path.dirname(os.path.abspath(__file__))
-template_dir = os.path.join(api_dir, '..', 'templates')
+project_root = os.path.abspath(os.path.join(api_dir, ".."))
+template_dir = os.path.join(project_root, "templates")
 
-# 2. Initialize Flask (ONLY ONE LINE NEEDED)
 app = Flask(__name__, template_folder=template_dir)
 
 # 3. Gemini Client Setup
