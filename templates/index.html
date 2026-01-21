@@ -1,26 +1,78 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>HR AI Agent</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR AI Agent | Analysis</title>
     <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; line-height: 1.6; }
-        .box { border: 2px dashed #ccc; padding: 20px; text-align: center; }
-        textarea { width: 100%; height: 100px; margin-bottom: 20px; }
-        button { background: #007bff; color: white; border: none; padding: 10px 20px; cursor: pointer; }
+        :root { --primary: #2563eb; --bg: #f8fafc; --card: #ffffff; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 800px; background: var(--card); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        h1 { color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        .form-group { margin-bottom: 20px; }
+        textarea { width: 100%; height: 100px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        .upload-area { border: 2px dashed #cbd5e1; padding: 20px; text-align: center; border-radius: 8px; cursor: pointer; }
+        button { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%; }
+        #result { margin-top: 30px; display: none; padding: 20px; background: #f1f5f9; border-radius: 8px; border-left: 5px solid var(--primary); }
+        .loading { display: none; color: var(--primary); font-weight: bold; margin: 10px 0; }
+        pre { white-space: pre-wrap; font-family: inherit; }
     </style>
 </head>
 <body>
-    <h2>HR AI Agent: Resume Screener</h2>
-    <form action="/api/analyze-cv" method="post" enctype="multipart/form-data">
-        <label>Job Description:</label><br>
-        <textarea name="jd" placeholder="Paste Job Description here..."></textarea><br>
-        
-        <label>Upload Resume (PDF):</label><br>
-        <div class="box">
-            <input type="file" name="cv" accept=".pdf" required>
-        </div><br>
-        
-        <button type="submit">Analyze Candidate</button>
-    </form>
+    <div class="container">
+        <h1>HR AI Agent</h1>
+        <form id="uploadForm">
+            <div class="form-group">
+                <label><strong>Job Description</strong></label>
+                <textarea name="jd" id="jd" placeholder="Paste requirements here..."></textarea>
+            </div>
+            <div class="form-group">
+                <label><strong>Resume (PDF)</strong></label>
+                <div class="upload-area">
+                    <input type="file" name="cv" id="cv" accept=".pdf" required>
+                </div>
+            </div>
+            <button type="submit" id="btn">Run Agentic Analysis</button>
+        </form>
+
+        <div class="loading" id="loader">Agent is reasoning... please wait.</div>
+
+        <div id="result">
+            <h3>Analysis Report</h3>
+            <pre id="analysisText"></pre>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn');
+            const loader = document.getElementById('loader');
+            const resultDiv = document.getElementById('result');
+            const textSpace = document.getElementById('analysisText');
+
+            btn.disabled = true;
+            loader.style.display = 'block';
+            resultDiv.style.display = 'none';
+
+            const formData = new FormData(e.target);
+            try {
+                const resp = await fetch('/api/analyze-cv', { method: 'POST', body: formData });
+                const data = await resp.json();
+                
+                if(data.status === "Success") {
+                    textSpace.innerText = data.analysis;
+                    resultDiv.style.display = 'block';
+                } else {
+                    alert("Error: " + data.error);
+                }
+            } catch (err) {
+                alert("Connection failed.");
+            } finally {
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
+        };
+    </script>
 </body>
 </html>
