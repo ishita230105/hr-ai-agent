@@ -3,76 +3,185 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HR AI Agent | Analysis</title>
+    <title>HR AI Agent | Batch Ranking</title>
     <style>
-        :root { --primary: #2563eb; --bg: #f8fafc; --card: #ffffff; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; }
-        .container { width: 100%; max-width: 800px; background: var(--card); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        h1 { color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
-        .form-group { margin-bottom: 20px; }
-        textarea { width: 100%; height: 100px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
-        .upload-area { border: 2px dashed #cbd5e1; padding: 20px; text-align: center; border-radius: 8px; cursor: pointer; }
-        button { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%; }
-        #result { margin-top: 30px; display: none; padding: 20px; background: #f1f5f9; border-radius: 8px; border-left: 5px solid var(--primary); }
-        .loading { display: none; color: var(--primary); font-weight: bold; margin: 10px 0; }
-        pre { white-space: pre-wrap; font-family: inherit; }
+        :root { --primary: #2563eb; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --border: #e2e8f0; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        
+        .container { max-width: 900px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; }
+        
+        /* Input Section */
+        .card { background: var(--card); padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        textarea { width: 100%; height: 100px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-top: 8px; font-family: inherit; }
+        .upload-area { border: 2px dashed var(--border); padding: 30px; text-align: center; border-radius: 8px; margin-top: 15px; cursor: pointer; transition: 0.2s; }
+        .upload-area:hover { border-color: var(--primary); background: #eff6ff; }
+        
+        button { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; margin-top: 20px; font-size: 16px; }
+        button:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        /* Results Grid */
+        #results-area { display: none; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px; }
+        
+        /* Leaderboard List */
+        .candidate-list { background: var(--card); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); height: fit-content; }
+        .list-header { background: #f1f5f9; padding: 15px; font-weight: bold; border-bottom: 1px solid var(--border); }
+        .candidate-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s; display: flex; justify-content: space-between; align-items: center; }
+        .candidate-item:hover { background: #f8fafc; }
+        .candidate-item.active { background: #eff6ff; border-left: 4px solid var(--primary); }
+        .score-badge { background: var(--text); color: white; padding: 4px 10px; border-radius: 20px; font-size: 14px; font-weight: bold; }
+        .score-high { background: #16a34a; } /* Green */
+        .score-med { background: #ca8a04; }  /* Yellow */
+        .score-low { background: #dc2626; }  /* Red */
+
+        /* Detail View */
+        .candidate-detail { background: var(--card); padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .detail-placeholder { color: #64748b; text-align: center; margin-top: 50px; }
+        .tag { display: inline-block; background: #e2e8f0; padding: 4px 8px; border-radius: 4px; margin: 2px; font-size: 13px; }
+        
+        .loading { display: none; text-align: center; margin: 20px; color: var(--primary); font-weight: 600; }
+
+        @media (max-width: 768px) {
+            #results-area { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>HR AI Agent</h1>
-        <form id="uploadForm">
-            <div class="form-group">
-                <label><strong>Job Description</strong></label>
-                <textarea name="jd" id="jd" placeholder="Paste requirements here..."></textarea>
-            </div>
-            <div class="form-group">
-                <label><strong>Resume (PDF)</strong></label>
-                <div class="upload-area">
-                    <input type="file" name="cv" id="cv" accept=".pdf" required>
-                </div>
-            </div>
-            <button type="submit" id="btn">Run Agentic Analysis</button>
-        </form>
 
-        <div class="loading" id="loader">Agent is reasoning... please wait.</div>
-
-        <div id="result">
-            <h3>Analysis Report</h3>
-            <pre id="analysisText"></pre>
-        </div>
+<div class="container">
+    <div class="header">
+        <h1>HR Agent: Batch Analysis</h1>
+        <p>Upload multiple resumes to rank them by relevance.</p>
     </div>
 
-    <script>
-        document.getElementById('uploadForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('btn');
-            const loader = document.getElementById('loader');
-            const resultDiv = document.getElementById('result');
-            const textSpace = document.getElementById('analysisText');
+    <form id="uploadForm" class="card">
+        <label><strong>1. Job Description</strong></label>
+        <textarea name="jd" id="jd" placeholder="Paste the job description here..."></textarea>
 
-            btn.disabled = true;
-            loader.style.display = 'block';
-            resultDiv.style.display = 'none';
+        <label style="display:block; margin-top: 15px;"><strong>2. Upload Resumes (PDF only)</strong></label>
+        <div class="upload-area" onclick="document.getElementById('cv').click()">
+            <p>Click to upload multiple PDFs</p>
+            <input type="file" name="cv" id="cv" accept=".pdf" multiple style="display: none;" onchange="updateFileCount()">
+        </div>
+        <p id="file-count" style="text-align: center; font-size: 0.9em; color: #64748b; margin-top: 5px;"></p>
 
-            const formData = new FormData(e.target);
-            try {
-                const resp = await fetch('/api/analyze-cv', { method: 'POST', body: formData });
-                const data = await resp.json();
-                
-                if(data.status === "Success") {
-                    textSpace.innerText = data.analysis;
-                    resultDiv.style.display = 'block';
-                } else {
-                    alert("Error: " + data.error);
-                }
-            } catch (err) {
-                alert("Connection failed.");
-            } finally {
+        <button type="submit" id="btn">Analyze Candidates</button>
+    </form>
+
+    <div class="loading" id="loader">Agent is analyzing resumes... this may take a moment.</div>
+
+    <div id="results-area" style="display: none;">
+        <div class="candidate-list" id="candidateList">
+            <div class="list-header">Ranked Candidates</div>
+            </div>
+
+        <div class="candidate-detail" id="detailView">
+            <div class="detail-placeholder">Select a candidate to view full analysis</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentAnalysisData = [];
+
+    function updateFileCount() {
+        const input = document.getElementById('cv');
+        const display = document.getElementById('file-count');
+        if(input.files.length > 0) {
+            display.innerText = `${input.files.length} file(s) selected`;
+        }
+    }
+
+    document.getElementById('uploadForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn');
+        const loader = document.getElementById('loader');
+        const resultsArea = document.getElementById('results-area');
+        
+        // Reset UI
+        btn.disabled = true;
+        loader.style.display = 'block';
+        resultsArea.style.display = 'none';
+        
+        const formData = new FormData(e.target);
+        
+        try {
+            const resp = await fetch('/api/analyze-cv', { method: 'POST', body: formData });
+            const data = await resp.json();
+            
+            if(data.status === "Success") {
+                currentAnalysisData = data.analysis;
+                renderList(currentAnalysisData);
+                loader.style.display = 'none';
+                resultsArea.style.display = 'grid'; // Changed to grid for layout
+            } else {
+                alert("Error: " + (data.error || "Unknown error"));
                 btn.disabled = false;
                 loader.style.display = 'none';
             }
-        };
-    </script>
+        } catch (err) {
+            console.error(err);
+            alert("Connection failed.");
+            btn.disabled = false;
+            loader.style.display = 'none';
+        }
+    };
+
+    function renderList(candidates) {
+        const listContainer = document.getElementById('candidateList');
+        // Clear previous list (keep header)
+        listContainer.innerHTML = '<div class="list-header">Ranked Candidates</div>';
+
+        candidates.forEach((c, index) => {
+            const div = document.createElement('div');
+            div.className = 'candidate-item';
+            div.onclick = () => showDetail(index);
+            
+            // Color code score
+            let badgeClass = 'score-low';
+            if(c.match_score >= 80) badgeClass = 'score-high';
+            else if(c.match_score >= 50) badgeClass = 'score-med';
+
+            div.innerHTML = `
+                <span>${index + 1}. ${c.candidate_name}</span>
+                <span class="score-badge ${badgeClass}">${c.match_score}%</span>
+            `;
+            listContainer.appendChild(div);
+        });
+        
+        // Automatically select the top candidate
+        if(candidates.length > 0) showDetail(0);
+    }
+
+    function showDetail(index) {
+        const c = currentAnalysisData[index];
+        const detailContainer = document.getElementById('detailView');
+        
+        // Highlight active list item
+        document.querySelectorAll('.candidate-item').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.candidate-item')[index].classList.add('active');
+
+        // Build HTML for details
+        let strengthsHtml = c.key_strengths.map(s => `<span class="tag">${s}</span>`).join('');
+        let weakHtml = c.weaknesses.map(w => `<li style="color: #dc2626;">${w}</li>`).join('');
+
+        detailContainer.innerHTML = `
+            <h2 style="margin-top:0;">${c.candidate_name}</h2>
+            <div style="margin-bottom: 15px;">
+                <strong>Score: ${c.match_score}/100</strong>
+            </div>
+            <p><strong>Summary:</strong> ${c.summary}</p>
+            
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+            
+            <h4>✅ Key Strengths</h4>
+            <div>${strengthsHtml}</div>
+            
+            <h4>⚠️ Areas for Concern</h4>
+            <ul>${weakHtml}</ul>
+        `;
+    }
+</script>
+
 </body>
 </html>
