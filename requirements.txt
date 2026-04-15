@@ -1,4 +1,9 @@
-flask
-google-genai
-python-dotenv
-pypdf
+Flask==3.0.0
+pypdf==3.17.1
+google-genai==0.3.0
+python-dotenv==1.0.0
+matplotlib==3.8.2
+# Add this to handle the missing server libraries:
+cycler==0.12.1
+kiwisolver==1.4.5
+pill==10.1.0

@@ -6,7 +6,7 @@ import textwrap
 import base64
 from io import BytesIO
 import matplotlib
-matplotlib.use('Agg') # CRITICAL: Must be before plt import
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from flask import Flask, render_template, jsonify, request
 from dotenv import load_dotenv
