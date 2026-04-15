@@ -3,76 +3,285 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HR AI Agent | Analysis</title>
+    <title>HR AI Agent | Enterprise Screener</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { --primary: #2563eb; --bg: #f8fafc; --card: #ffffff; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; }
-        .container { width: 100%; max-width: 800px; background: var(--card); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        h1 { color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
-        .form-group { margin-bottom: 20px; }
-        textarea { width: 100%; height: 100px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
-        .upload-area { border: 2px dashed #cbd5e1; padding: 20px; text-align: center; border-radius: 8px; cursor: pointer; }
-        button { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%; }
-        #result { margin-top: 30px; display: none; padding: 20px; background: #f1f5f9; border-radius: 8px; border-left: 5px solid var(--primary); }
-        .loading { display: none; color: var(--primary); font-weight: bold; margin: 10px 0; }
-        pre { white-space: pre-wrap; font-family: inherit; }
+        :root {
+            --primary: #4f46e5;
+            --success: #22c55e;
+            --warning: #f59e0b;
+        }
+        body {
+            background: radial-gradient(circle at top left, #f8fafc, #e2e8f0);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        /* Custom UI Elements */
+        .score-circle {
+            width: 100px; height: 100px; border-radius: 50%;
+            border: 8px solid #e2e8f0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; font-weight: 900; margin: 0 auto;
+        }
+        .badge {
+            display: inline-block; padding: 4px 12px; border-radius: 20px;
+            font-size: 12px; font-weight: 700; margin: 4px;
+        }
+        .badge-tech { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+        .badge-missing { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        
+        /* Drag & Drop Hover States */
+        .drop-active { background-color: #eef2ff !important; border-color: var(--primary) !important; }
+        
+        /* Smooth Transitions */
+        .fade-in { animation: fadeIn 0.5s ease-in forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>HR AI Agent</h1>
-        <form id="uploadForm">
-            <div class="form-group">
-                <label><strong>Job Description</strong></label>
-                <textarea name="jd" id="jd" placeholder="Paste requirements here..."></textarea>
+<body class="py-10 px-4 flex justify-center">
+
+    <div class="w-full max-w-6xl bg-white/90 backdrop-blur-xl p-8 rounded-2xl shadow-2xl border border-white">
+        
+        <div class="flex items-center space-x-4 border-b-2 border-slate-100 pb-6 mb-8">
+            <div class="bg-indigo-600 p-3 rounded-lg shadow-md">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
             </div>
-            <div class="form-group">
-                <label><strong>Resume (PDF)</strong></label>
-                <div class="upload-area">
-                    <input type="file" name="cv" id="cv" accept=".pdf" required>
+            <div>
+                <h1 class="text-3xl font-extrabold text-slate-800 tracking-tight">Agentic AI Screener</h1>
+                <p class="text-slate-500 font-medium">Powered by Gemini 2.5 Flash</p>
+            </div>
+        </div>
+
+        <div id="inputSection" class="transition-all duration-500">
+            <form id="uploadForm">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    
+                    <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-inner flex flex-col">
+                        <label class="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wider">1. Define Job Role</label>
+                        <textarea name="jd" id="jd" class="flex-1 w-full p-4 border border-slate-300 rounded-lg focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none text-slate-700 font-medium" placeholder="Paste the complete job description, requirements, and responsibilities here..." style="min-height: 250px;"></textarea>
+                    </div>
+
+                    <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-inner flex flex-col">
+                        <label class="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wider">2. Upload Candidates</label>
+                        
+                        <div id="drop-zone" class="flex-1 border-2 border-dashed border-indigo-300 rounded-lg bg-white transition-all flex flex-col items-center justify-center p-8 cursor-pointer relative group">
+                            <input type="file" name="cv" id="cv" accept=".pdf" multiple required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                            
+                            <div class="text-indigo-400 group-hover:text-indigo-600 transition-colors mb-4 transform group-hover:scale-110 duration-300">
+                                <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                            </div>
+                            <p class="text-slate-800 font-bold text-lg text-center">Drag & drop candidate PDFs</p>
+                            <p class="text-sm font-medium text-slate-500 mt-2">Supports batch upload (multiple files)</p>
+                        </div>
+                        
+                        <div id="file-list-container" class="mt-4 hidden flex-col">
+                            <div class="text-center text-sm font-bold text-indigo-700 bg-indigo-100 p-2 rounded-t-lg border border-indigo-200 border-b-0 shadow-sm z-10">
+                                <span id="file-count-num">0</span> candidates queued for batch analysis.
+                            </div>
+                            <div id="file-names-list" class="bg-white border border-indigo-200 rounded-b-lg p-2 max-h-32 overflow-y-auto space-y-1 shadow-inner relative">
+                                </div>
+                        </div>
+                    </div>
                 </div>
+
+                <button type="submit" id="btn" class="w-full bg-slate-900 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg hover:shadow-2xl text-lg flex justify-center items-center space-x-2">
+                    <span>Initialize Agentic Batch Processing</span>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </button>
+            </form>
+        </div>
+
+        <div id="resultSection" style="display: none;" class="fade-in">
+            <div class="flex justify-between items-center mb-8 border-b-2 border-slate-100 pb-4">
+                <h2 class="text-2xl font-bold text-slate-800">Recruitment Analytics</h2>
+                <button id="resetBtn" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold py-2 px-4 rounded-lg transition-colors shadow-sm flex items-center space-x-2">
+                    <span>← Process New Batch</span>
+                </button>
             </div>
-            <button type="submit" id="btn">Run Agentic Analysis</button>
-        </form>
+            
+            <div id="loader" class="flex flex-col items-center justify-center my-12">
+                <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+                <p id="loaderText" class="text-indigo-700 font-bold text-lg">Initializing Agent Workspace...</p>
+            </div>
 
-        <div class="loading" id="loader">Agent is reasoning... please wait.</div>
-
-        <div id="result">
-            <h3>Analysis Report</h3>
-            <pre id="analysisText"></pre>
+            <div id="dashboardGrid" class="space-y-8"></div>
         </div>
     </div>
-
+    
     <script>
-        document.getElementById('uploadForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('btn');
-            const loader = document.getElementById('loader');
-            const resultDiv = document.getElementById('result');
-            const textSpace = document.getElementById('analysisText');
+        // --- UI Elements ---
+        // --- Helper: API Throttling ---
+        const delay = ms => new Promise(res => setTimeout(res, ms));
+        const uploadForm = document.getElementById('uploadForm');
+        const inputSection = document.getElementById('inputSection');
+        const resultSection = document.getElementById('resultSection');
+        const dashboardGrid = document.getElementById('dashboardGrid');
+        const loader = document.getElementById('loader');
+        const loaderText = document.getElementById('loaderText');
+        const resetBtn = document.getElementById('resetBtn');
+        const fileInput = document.getElementById('cv');
+        const dropZone = document.getElementById('drop-zone');
+        // --- UI Elements (Add these new ones to your existing list) ---
+        const fileListContainer = document.getElementById('file-list-container');
+        const fileNamesList = document.getElementById('file-names-list');
+        const fileCountNum = document.getElementById('file-count-num');
 
-            btn.disabled = true;
-            loader.style.display = 'block';
-            resultDiv.style.display = 'none';
+        // NEW: Enterprise File Accumulator
+        // This prevents the browser from overwriting files if you drag them one by one
+        let dataTransfer = new DataTransfer();
 
-            const formData = new FormData(e.target);
-            try {
-                const resp = await fetch('/api/analyze-cv', { method: 'POST', body: formData });
-                const data = await resp.json();
-                
-                if(data.status === "Success") {
-                    textSpace.innerText = data.analysis;
-                    resultDiv.style.display = 'block';
-                } else {
-                    alert("Error: " + data.error);
+        // --- Drag & Drop UX ---
+        fileInput.addEventListener('change', function() {
+            // 1. Accumulate files (don't overwrite)
+            for (let file of this.files) {
+                // Prevent duplicate uploads of the exact same file
+                const isDuplicate = Array.from(dataTransfer.files).some(f => f.name === file.name);
+                if (!isDuplicate) {
+                    dataTransfer.items.add(file);
                 }
-            } catch (err) {
-                alert("Connection failed.");
-            } finally {
-                btn.disabled = false;
-                loader.style.display = 'none';
             }
+
+            // 2. Sync accumulated files back to the hidden input so the form submission catches them all
+            this.files = dataTransfer.files;
+            const fileCount = this.files.length;
+
+            // 3. Update UI
+            if (fileCount > 0) {
+                fileCountNum.innerText = fileCount;
+                fileListContainer.style.display = 'flex';
+                dropZone.classList.add('drop-active');
+
+                // 4. Render Scrollable List
+                fileNamesList.innerHTML = '';
+                Array.from(this.files).forEach((file, index) => {
+                    fileNamesList.innerHTML += `
+                        <div class="flex items-center text-sm text-slate-700 bg-slate-50 p-2 rounded border border-slate-100 hover:bg-slate-100 transition-colors">
+                            <span class="font-mono text-xs text-slate-400 mr-2 w-4">${index + 1}.</span>
+                            <svg class="w-4 h-4 mr-2 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg>
+                            <span class="truncate font-medium">${file.name}</span>
+                        </div>
+                    `;
+                });
+            }
+        });
+
+        // CSS hack for dragover styling
+        fileInput.addEventListener('dragenter', () => dropZone.classList.add('drop-active'));
+        fileInput.addEventListener('dragleave', () => dropZone.classList.remove('drop-active'));
+
+        // --- Core Agentic Processing Loop ---
+        uploadForm.onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const jd = document.getElementById('jd').value;
+            const files = fileInput.files;
+
+            if (files.length === 0) return alert("Please upload at least one candidate resume.");
+
+            // Switch to Dashboard View
+            inputSection.style.display = 'none';
+            resultSection.style.display = 'block';
+            dashboardGrid.innerHTML = ''; 
+            loader.style.display = 'flex';
+
+            // Loop and Process sequentially
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                loaderText.innerText = `Analyzing candidate ${i + 1} of ${files.length}: ${file.name}...`;
+
+                const formData = new FormData();
+                formData.append('jd', jd);
+                formData.append('cv', file);
+
+                try {
+                    const resp = await fetch('/api/analyze-cv', { method: 'POST', body: formData });
+                    const resultObj = await resp.json();
+
+                    if (resultObj.status === "Success") {
+                        dashboardGrid.innerHTML += buildCandidateCard(resultObj.data, resultObj.chart, file.name);
+                    } else {
+                        dashboardGrid.innerHTML += `<div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg text-red-700 font-bold shadow-sm">Error processing ${file.name}: ${resultObj.error}</div>`;
+                    }
+                } catch (err) {
+                    console.error(err);
+                    dashboardGrid.innerHTML += `<div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg text-red-700 font-bold shadow-sm">Network Error on ${file.name}</div>`;
+                }
+
+                // THE FIX: Wait 2.5 seconds before sending the next resume 
+                // (Only wait if it's NOT the last file in the queue)
+                if (i < files.length - 1) {
+                    loaderText.innerText = `Cooling down API to prevent rate limits...`;
+                    await delay(2500); 
+                }
+            }
+
+            // Hide loader when batch is complete
+            loader.style.display = 'none';
         };
+
+        // --- Reset App State ---
+        resetBtn.onclick = () => {
+            resultSection.style.display = 'none';
+            inputSection.style.display = 'block';
+            uploadForm.reset();
+            
+            // Clear the accumulator completely
+            dataTransfer = new DataTransfer();
+            fileInput.files = dataTransfer.files;
+            
+            if(fileListContainer) fileListContainer.style.display = 'none';
+            dropZone.classList.remove('drop-active');
+        };
+
+        // --- HTML Generator for Results ---
+        function buildCandidateCard(data, chartBase64, filename) {
+            const badgeTech = data.technical_alignment.map(item => `<span class="badge badge-tech">${item}</span>`).join(' ');
+            const badgeMissing = data.missing_critical_skills.map(item => `<span class="badge badge-missing">${item}</span>`).join(' ');
+            const questions = data.interview_questions.map(q => `<li class="mb-2 pl-1">${q}</li>`).join('');
+            
+            const verdictColor = data.verdict === "Shortlist" ? '#dcfce7' : (data.verdict === "Reject" ? '#fee2e2' : '#fef9c3');
+            const verdictText = data.verdict === "Shortlist" ? '#166534' : (data.verdict === "Reject" ? '#991b1b' : '#854d0e');
+            const ringColor = data.match_score > 70 ? '#22c55e' : (data.match_score > 40 ? '#f59e0b' : '#ef4444');
+
+            return `
+            <div class="bg-white p-0 rounded-2xl shadow-md border border-slate-200 relative overflow-hidden fade-in">
+                <div class="absolute top-0 left-0 w-full h-2" style="background-color: ${ringColor}"></div>
+                
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h3 class="text-xl font-bold text-slate-800 flex items-center space-x-2">
+                        <svg class="w-5 h-5 text-slate-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg>
+                        <span>${filename}</span>
+                    </h3>
+                    <span class="px-5 py-1.5 rounded-full font-bold text-sm tracking-wide uppercase shadow-sm border border-black/5" style="background: ${verdictColor}; color: ${verdictText}">
+                        ${data.verdict}
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-0">
+                    
+                    <div class="p-6 lg:col-span-3 flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-slate-100 bg-white">
+                        <div class="score-circle text-slate-800 mb-4" style="border-color: ${ringColor}">${data.match_score}%</div>
+                        <p class="text-sm text-slate-600 italic text-center font-medium leading-relaxed">${data.candidate_summary}</p>
+                    </div>
+
+                    <div class="p-6 lg:col-span-4 border-b lg:border-b-0 lg:border-r border-slate-100 bg-slate-50/50">
+                        <h5 class="font-bold text-slate-800 mb-3 text-sm uppercase tracking-wider">Technical Alignment</h5>
+                        <div class="mb-6">${badgeTech}</div>
+                        <h5 class="font-bold text-red-700 mb-3 text-sm uppercase tracking-wider">Critical Gaps</h5>
+                        <div>${badgeMissing}</div>
+                    </div>
+
+                    <div class="p-6 lg:col-span-5 flex flex-col justify-between bg-white">
+                        <div class="mb-4">
+                            <h5 class="font-bold text-slate-800 mb-3 text-sm uppercase tracking-wider">AI Generated Interview Strategy</h5>
+                            <ul class="text-sm text-slate-700 list-disc pl-5 leading-tight">${questions}</ul>
+                        </div>
+                        ${chartBase64 ? `<img src="data:image/png;base64,${chartBase64}" class="w-full rounded-lg shadow-sm border border-slate-200 mt-4">` : ''}
+                    </div>
+                </div>
+            </div>`;
+        }
     </script>
 </body>
 </html>
